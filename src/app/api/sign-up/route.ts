@@ -1,4 +1,4 @@
-
+/*
 
 import dbConnect from '@/lib/dbConnect';
 import UserModel from '@/model/User';
@@ -96,5 +96,55 @@ export async function POST(request: Request) {
       },
       { status: 500 }
     );
+  }
+}
+*/
+
+
+
+
+import dbConnect from '@/lib/dbConnect'
+import UserModel from '@/model/User'
+import bcrypt from 'bcryptjs'
+import { sendVerificationEmail } from '@/helpers/sendVerificationEmail'
+
+export async function POST(request: Request) {
+  console.log("✅ [API] /sign-up route hit")
+
+  try {
+    const body = await request.json()
+    const { username, email, password } = body
+
+    console.log("📥 Received:", { username, email })
+
+    // Connect to DB
+    await dbConnect()
+    console.log("MongoDB connected")
+
+    // Password hash
+    const hashedPassword = await bcrypt.hash(password, 10)
+    console.log("Password hashed")
+
+    // Create user
+    const newUser = await UserModel.create({
+      username,
+      email,
+      password: hashedPassword,
+      isVerified: false,
+    })
+    console.log("👤 User created:", newUser)
+
+    // Send verification email
+    const emailRes = await sendVerificationEmail(email, username, "123456")
+    console.log("📧 Email sent status:", emailRes)
+
+    return Response.json({ success: true, message: 'User registered' })
+
+  } catch (err: any) {
+    console.error("Error in /sign-up:", err)
+    return Response.json(
+      { success: false, message: err.message || "Signup failed" },
+      { status: 500 },
+    )
   }
 }
